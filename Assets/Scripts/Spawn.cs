@@ -21,7 +21,7 @@ public class Spawn : MonoBehaviour
 
     public void SpawnNext()
     {
-        Instantiate(balls[0]);
+        // Instantiate(balls[0]);
         // Instantiate(Balls[])
     }
 }

@@ -22,19 +22,37 @@ public class SelectionManager : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            var hit = Physics2D.Raycast(mousePos, Vector2.zero, 0f);
-            if (hit.collider != null)
+            var clickPos = Vector2Int.RoundToInt(mousePos);
+            // var hit = Physics2D.Raycast(mousePos, Vector2.zero, 0f);
+            // hit.collider != null
+            if (0 <= clickPos.x && clickPos.x < Ball.Width && 0 <= clickPos.y && clickPos.y < Ball.Height)
             {
-                var parent = hit.collider.gameObject.transform.parent;
-                if (parent != _selectedTransform)
+                if (!Ball.IsSlotEmpty(clickPos))
                 {
-                    if (_selectedTransform != null)
-                        _selectedTransform.GetComponent<Animator>().SetBool(Selected, false);
-                    _selectedTransform = parent;
+                    var ballTransform = Ball.GetBallOnGrid(clickPos);
+                    if (ballTransform != _selectedTransform)
+                    {
+                        if (_selectedTransform != null)
+                            _selectedTransform.GetComponent<Animator>().SetBool(Selected, false);
+                        _selectedTransform = ballTransform;
+                    }
+                    ballTransform.GetComponent<Animator>().SetBool(Selected, true);
                 }
-                parent.GetComponent<Animator>().SetBool(Selected, true);
+                else
+                {
+                    // TODO: verify valid move
+                    if (_selectedTransform.GetComponent<Ball>().MoveTo(clickPos))
+                    {
+                        _selectedTransform.GetComponent<Animator>().SetBool(Selected, false);
+                        _selectedTransform = null;
+                    }
+                    else
+                    {
+                        // play error sound
+                    }
+                }
             }
-            Ball.PrintGrid();
+            // Ball.PrintGrid();
             spawner.SpawnNext();
         }
     }
