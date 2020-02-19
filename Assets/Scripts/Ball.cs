@@ -2,29 +2,24 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using UnityEditor;
 using UnityEngine;
-using Vector2 = UnityEngine.Vector2;
+using Random = System.Random;
 
 public class Ball : MonoBehaviour
 {
     public const int Width = 9;
     public const int Height = 9;
+    private static int _score;
+    private static readonly Random _random = new Random();
     private static readonly Transform[,] Grid = new Transform[Width, Height];
     private static readonly HashSet<int> EmptySlots = new HashSet<int>(Enumerable.Range(0, Width * Height));
-    
+    private static readonly int Selected = Animator.StringToHash("Selected");
+
     // Start is called before the first frame update
     void Start()
     {
-        try
-        {
-            AddToGrid();
-        }
-        catch (OccupiedSlotException)
-        {
-            Destroy(gameObject);
-        }
+
     }
 
     // Update is called once per frame
@@ -33,9 +28,8 @@ public class Ball : MonoBehaviour
         
     }
 
-    private void AddToGrid()
+    public void AddToGrid(Vector2Int position)
     { 
-        var position = (Vector2Int) Vector3Int.RoundToInt(transform.position);
         if (IsSlotEmpty(position.x, position.y))
         {
             Grid[position.x, position.y] = transform;
@@ -47,9 +41,8 @@ public class Ball : MonoBehaviour
         }
     }
 
-    private void RemoveFromGrid()
+    private static void RemoveFromGrid(Vector2Int position)
     {
-        var position = (Vector2Int) Vector3Int.RoundToInt(transform.position);
         if (!IsSlotEmpty(position.x, position.y))
         {
             Grid[position.x, position.y] = null;
@@ -57,23 +50,41 @@ public class Ball : MonoBehaviour
         }
     }
 
-    /// <returns>bool is_move_valid</returns>
-    public bool MoveTo(Vector2Int pos)
+    public bool MoveTo(Vector2Int to, Spawn spawner)
     {
-        var path = IsMoveValid(pos);
-        if (path == null) return false;
-        foreach (var VARIABLE in path)
+        var from = Vector2Int.RoundToInt(transform.position);
+        var path = IsMoveValid(from, to);
+        if (path == null)
         {
-            Debug.Log(VARIABLE);
+            EditorApplication.Beep();
+            return false;
         }
-        // if move is not valid return false
-        RemoveFromGrid();
-        transform.position = (Vector2)pos;
-        AddToGrid();
+        RemoveFromGrid(from);
+        AddToGrid(to);
+        StartCoroutine(MoveAnimation(path, spawner));
         return true;
     }
 
-    public static bool IsSlotEmpty(int x, int y)
+    IEnumerator MoveAnimation(LinkedList<Vector2Int> path, Spawn spawner)
+    {
+        foreach (var point in path)
+        {
+            transform.position = (Vector2)point;
+            yield return new WaitForSeconds(0.025f);
+        }
+        transform.GetComponent<Animator>().SetBool(Selected, false);
+        var positions = transform.GetComponent<Ball>().CheckMatch(true);
+        if (positions.Count > 0)
+        {
+            ClearLines(positions);
+        }
+        else
+        {
+            spawner.SpawnNext();
+        }
+    }
+
+    private static bool IsSlotEmpty(int x, int y)
     {
         return EmptySlots.Contains(PosToIndex(x, y)) && Grid[x, y] == null;
     }
@@ -81,6 +92,11 @@ public class Ball : MonoBehaviour
     public static bool IsSlotEmpty(Vector2Int pos)
     {
         return IsSlotEmpty(pos.x, pos.y);
+    }
+
+    public static Vector2Int RandomEmptySlot()
+    {
+        return IndexToPos(EmptySlots.ElementAt(_random.Next(EmptySlots.Count)));
     }
 
     public static Transform GetBallOnGrid(Vector2Int pos)
@@ -98,11 +114,16 @@ public class Ball : MonoBehaviour
         return x * Width + y;
     }
 
-    public LinkedList<Vector2Int> IsMoveValid(Vector2Int pos)
+    public static Vector2Int IndexToPos(int index)
     {
-        if (Grid[pos.x, pos.y] != null)
+        return new Vector2Int(index / Width, index % Height);
+    }
+
+    private LinkedList<Vector2Int> IsMoveValid(Vector2Int from, Vector2Int to)
+    {
+        if (Grid[to.x, to.y] != null)
             return null;
-        var goalIndex = PosToIndex(pos);
+        var goalIndex = PosToIndex(to);
         var startIndex = PosToIndex(Vector2Int.RoundToInt(transform.position));
         var openSet = new HashSet<int>{startIndex};
         var cameFrom = new Dictionary<int, int>();
@@ -123,9 +144,11 @@ public class Ball : MonoBehaviour
                 totalPath.AddLast(IndexToPos(currentIndex));
                 while (cameFrom.ContainsKey(currentIndex))
                 {
-                    // Debug.Log($"{IndexToPos(cameFrom[currentIndex])} => {IndexToPos(currentIndex)}");
                     currentIndex = cameFrom[currentIndex];
-                    totalPath.AddFirst(IndexToPos(currentIndex));
+                    if (currentIndex != PosToIndex(from))
+                    {
+                        totalPath.AddFirst(IndexToPos(currentIndex));
+                    }
                 }
                 return totalPath;
             }
@@ -152,23 +175,125 @@ public class Ball : MonoBehaviour
         return null;
     }
 
-    public static Vector2Int IndexToPos(int index)
+    public HashSet<Vector2Int> CheckMatch(bool countScore)
     {
-        return new Vector2Int(index / Width, index % Height);
+        var color = transform.GetChild(0).GetComponent<SpriteRenderer>().color;
+        var pos = Vector2Int.RoundToInt(transform.position);
+        var positions = new HashSet<Vector2Int>();
+        var count = 0;
+        var currentCount = 0;
+        HashSet<Vector2Int> currentPositions;
+        Vector2Int currentPos;
+        // 0 deg
+        currentPositions = new HashSet<Vector2Int>{pos};
+        currentCount = 1;
+        currentPos = pos + Vector2Int.right;
+        while (currentPos.x < Width && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.right;
+        }
+        currentPos = pos + Vector2Int.left;
+        while (currentPos.x >= 0 && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.left;
+        }
+        if (currentCount >= 5)
+        {
+            count += currentCount;
+            positions.UnionWith(currentPositions);
+        }
+        // 45 deg
+        currentPositions = new HashSet<Vector2Int>{pos};
+        currentCount = 1;
+        currentPos = pos + Vector2Int.right + Vector2Int.up;
+        while (currentPos.x < Width && currentPos.y < Height && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.right + Vector2Int.up;
+        }
+        currentPos = pos + Vector2Int.left + Vector2Int.down;
+        while (currentPos.x >= 0 && currentPos.y >= 0 && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.left + Vector2Int.down;
+        }
+        if (currentCount >= 5)
+        {
+            count += currentCount;
+            positions.UnionWith(currentPositions);
+        }
+        // 90 deg
+        currentPositions = new HashSet<Vector2Int>{pos};
+        currentCount = 1;
+        currentPos = pos + Vector2Int.up;
+        while (currentPos.y < Height && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.up;
+        }
+        currentPos = pos + Vector2Int.down;
+        while (currentPos.y >= 0 && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.down;
+        }
+        if (currentCount >= 5)
+        {
+            count += currentCount;
+            positions.UnionWith(currentPositions);
+        }
+        // 235 deg
+        currentPositions = new HashSet<Vector2Int>{pos};
+        currentCount = 1;
+        currentPos = pos + Vector2Int.left + Vector2Int.up;
+        while (currentPos.x >= 0 && currentPos.y < Height && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.left + Vector2Int.up;
+        }
+        currentPos = pos + Vector2Int.right + Vector2Int.down;
+        while (currentPos.x < Width && currentPos.y >= 0 && !IsSlotEmpty(currentPos) && Grid[currentPos.x, currentPos.y].GetChild(0).GetComponent<SpriteRenderer>().color == color)
+        {
+            currentCount += 1;
+            currentPositions.Add(currentPos);
+            currentPos += Vector2Int.right + Vector2Int.down;
+        }
+        if (currentCount >= 5)
+        {
+            count += currentCount;
+            positions.UnionWith(currentPositions);
+        }
+        if (countScore)
+            AddScoreByCount(count);
+        return positions;
     }
 
-    public static void PrintGrid()
-    {            
-        Debug.Log("==============START==============");
-        foreach (var _transform in Grid)
+    public static void ClearLines(HashSet<Vector2Int> positions)
+    {
+        foreach (var position in positions)
         {
-            if (_transform)
-            {
-                Debug.Log(_transform.position);
-            }
+            Transform transform = Grid[position.x, position.y];
+            Debug.Log(transform);
+            RemoveFromGrid(position);
+            Destroy(transform.gameObject);
         }
-        Debug.Log("Count: " + EmptySlots.Count);
-        Debug.Log("===============END===============");
+    }
+
+    private static void AddScoreByCount(int count)
+    {
+        if (count < 5)
+            return;
+        _score += 10 + (count - 5) * (count - 5) * 2;
+        Debug.Log(_score);
     }
 
     [Serializable]
