@@ -9,6 +9,7 @@
       <e p="Assets" t="Include">
         <e p="Scripts" t="Include">
           <e p="Ball.cs" t="Include" />
+          <e p="FullScreenManager.cs" t="Include" />
           <e p="SelectionManager.cs" t="Include" />
           <e p="Spawn.cs" t="Include" />
         </e>
