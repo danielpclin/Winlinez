@@ -35,7 +35,6 @@ public class Spawn : MonoBehaviour
         
         Ball.ClearLines(toClear);
         PrepareNext();
-        // Remove balls
     }
 
     private void SpawnFirst()

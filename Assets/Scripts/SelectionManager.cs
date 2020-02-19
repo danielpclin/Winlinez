@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class SelectionManager : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class SelectionManager : MonoBehaviour
     private static readonly int Selected = Animator.StringToHash("Selected");
     private delegate void spawnNext();
     public Spawn spawner;
+    public Text ScoreText;
     
     // Start is called before the first frame update
     void Start()
@@ -46,7 +48,7 @@ public class SelectionManager : MonoBehaviour
                     }
                 }
             }
-            // Ball.PrintGrid();
         }
+        ScoreText.text = "Score: " + Ball.GetScore();
     }
 }

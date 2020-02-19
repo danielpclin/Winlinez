@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 using Random = System.Random;
 
@@ -56,7 +55,7 @@ public class Ball : MonoBehaviour
         var path = IsMoveValid(from, to);
         if (path == null)
         {
-            EditorApplication.Beep();
+            // EditorApplication.Beep();
             return false;
         }
         RemoveFromGrid(from);
@@ -282,7 +281,6 @@ public class Ball : MonoBehaviour
         foreach (var position in positions)
         {
             Transform transform = Grid[position.x, position.y];
-            Debug.Log(transform);
             RemoveFromGrid(position);
             Destroy(transform.gameObject);
         }
@@ -294,6 +292,11 @@ public class Ball : MonoBehaviour
             return;
         _score += 10 + (count - 5) * (count - 5) * 2;
         Debug.Log(_score);
+    }
+
+    public static int GetScore()
+    {
+        return _score;
     }
 
     [Serializable]
