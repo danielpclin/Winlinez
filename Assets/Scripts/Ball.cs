@@ -55,7 +55,6 @@ public class Ball : MonoBehaviour
         var path = IsMoveValid(from, to);
         if (path == null)
         {
-            // EditorApplication.Beep();
             return false;
         }
         RemoveFromGrid(from);
