@@ -9,9 +9,9 @@ public class SelectionManager : MonoBehaviour
 {
     private static Transform _selectedTransform;
     private static readonly int Selected = Animator.StringToHash("Selected");
-    private delegate void spawnNext();
     public Spawn spawner;
     public Text ScoreText;
+    public Restart restartManager;
     
     // Start is called before the first frame update
     void Start()
@@ -21,7 +21,7 @@ public class SelectionManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (!Restart.GameOver && Input.GetMouseButtonDown(0))
         {
             if (Camera.main != null)
             {
@@ -49,6 +49,10 @@ public class SelectionManager : MonoBehaviour
                     }
                 }
             }
+        }
+        if (Ball.EmptySlotsCount == 0)
+        {
+            restartManager.Pause();
         }
         ScoreText.text = "Score: " + Ball.GetScore();
     }

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Random = System.Random;
@@ -27,12 +28,18 @@ public class Spawn : MonoBehaviour
         HashSet<Vector2Int> toClear = new HashSet<Vector2Int>();
         foreach (var i in _nextBallsInt)
         {
-            var currentBall = Instantiate(ballsRef[i],  (Vector2)Ball.RandomEmptySlot(), Quaternion.identity).GetComponent<Ball>();
-            currentBall.AddToGrid(Vector2Int.RoundToInt(currentBall.transform.position));
-            var currentClear = currentBall.CheckMatch(false);
-            toClear.UnionWith(currentClear);
+            try
+            {
+                var currentBall = Instantiate(ballsRef[i],  (Vector2)Ball.RandomEmptySlot(), Quaternion.identity).GetComponent<Ball>();
+                currentBall.AddToGrid(Vector2Int.RoundToInt(currentBall.transform.position));
+                var currentClear = currentBall.CheckMatch(false);
+                toClear.UnionWith(currentClear);
+            }
+            catch (Exception)
+            {
+                break;
+            }
         }
-        
         Ball.ClearLines(toClear);
         PrepareNext();
     }

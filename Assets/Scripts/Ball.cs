@@ -11,8 +11,8 @@ public class Ball : MonoBehaviour
     public const int Height = 9;
     private static int _score;
     private static readonly Random _random = new Random();
-    private static readonly Transform[,] Grid = new Transform[Width, Height];
-    private static readonly HashSet<int> EmptySlots = new HashSet<int>(Enumerable.Range(0, Width * Height));
+    private static Transform[,] Grid = new Transform[Width, Height];
+    private static HashSet<int> EmptySlots = new HashSet<int>(Enumerable.Range(0, Width * Height));
     private static readonly int Selected = Animator.StringToHash("Selected");
 
     // Start is called before the first frame update
@@ -27,6 +27,13 @@ public class Ball : MonoBehaviour
         
     }
 
+    public static void ResetState()
+    {
+        _score = 0;
+        Grid = new Transform[Width, Height];
+        EmptySlots = new HashSet<int>(Enumerable.Range(0, Width * Height));
+    }
+
     public void AddToGrid(Vector2Int position)
     { 
         if (IsSlotEmpty(position.x, position.y))
@@ -39,6 +46,8 @@ public class Ball : MonoBehaviour
             throw new OccupiedSlotException("Piece Already in slot");
         }
     }
+
+    public static int EmptySlotsCount => EmptySlots.Count;
 
     private static void RemoveFromGrid(Vector2Int position)
     {
@@ -94,6 +103,10 @@ public class Ball : MonoBehaviour
 
     public static Vector2Int RandomEmptySlot()
     {
+        if (EmptySlots.Count == 0)
+        {
+            throw new Exception();
+        }
         return IndexToPos(EmptySlots.ElementAt(_random.Next(EmptySlots.Count)));
     }
 
