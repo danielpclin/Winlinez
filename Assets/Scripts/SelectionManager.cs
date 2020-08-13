@@ -21,39 +21,43 @@ public class SelectionManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!Restart.GameOver && Input.GetMouseButtonDown(0))
+        if (!Restart.GameIsOver)
         {
-            if (Camera.main != null)
+            if (Input.GetMouseButtonDown(0))
             {
-                var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                var clickPos = Vector2Int.RoundToInt(mousePos);
-                if (0 <= clickPos.x && clickPos.x < Ball.Width && 0 <= clickPos.y && clickPos.y < Ball.Height)
+                if (Camera.main != null)
                 {
-                    if (!Ball.IsSlotEmpty(clickPos))
+                    var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                    var clickPos = Vector2Int.RoundToInt(mousePos);
+                    if (0 <= clickPos.x && clickPos.x < Ball.Width && 0 <= clickPos.y && clickPos.y < Ball.Height)
                     {
-                        var ballTransform = Ball.GetBallOnGrid(clickPos);
-                        if (ballTransform != _selectedTransform)
+                        if (!Ball.IsSlotEmpty(clickPos))
                         {
-                            if (_selectedTransform != null)
-                                _selectedTransform.GetComponent<Animator>().SetBool(Selected, false);
-                            _selectedTransform = ballTransform;
+                            var ballTransform = Ball.GetBallOnGrid(clickPos);
+                            if (ballTransform != _selectedTransform)
+                            {
+                                if (_selectedTransform != null)
+                                    _selectedTransform.GetComponent<Animator>().SetBool(Selected, false);
+                                _selectedTransform = ballTransform;
+                            }
+                            ballTransform.GetComponent<Animator>().SetBool(Selected, true);
                         }
-                        ballTransform.GetComponent<Animator>().SetBool(Selected, true);
-                    }
-                    else if(_selectedTransform != null)
-                    {
-                        if (_selectedTransform.GetComponent<Ball>().MoveTo(clickPos, spawner))
+                        else if(_selectedTransform != null)
                         {
-                            _selectedTransform = null;
+                            if (_selectedTransform.GetComponent<Ball>().MoveTo(clickPos, spawner))
+                            {
+                                _selectedTransform = null;
+                            }
                         }
                     }
-                }
+                }    
+            }
+            if (Ball.EmptySlotsCount == 0)
+            {
+                restartManager.GameOver();
             }
         }
-        if (Ball.EmptySlotsCount == 0)
-        {
-            restartManager.Pause();
-        }
+        
         ScoreText.text = "Score: " + Ball.GetScore();
     }
 }
